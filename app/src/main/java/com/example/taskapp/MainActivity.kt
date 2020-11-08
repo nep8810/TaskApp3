@@ -12,8 +12,11 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
+
 
 const val EXTRA_TASK = "com.example.taskapp.TASK"
+var taskList = mutableListOf<Task>() //可変リスト
 
 class MainActivity : AppCompatActivity() {
     //Realmクラスを保持するmRealmを定義
@@ -113,11 +116,15 @@ class MainActivity : AppCompatActivity() {
         mTaskAdapter.notifyDataSetChanged()
     }
 
+    //onCreateOptionsMenuメソッドにて、ActivityのもつMenuInflaterを取得し、リソースファイルをinflateしてmenuオブジェクトへ追加する
+    //このActivityでOptionsMenuを使用したい場合は、メソッドの戻り値を「true」にする
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
 
+    //onOptionsItemSelected()はメニューアイテムが選択された際の処理を実装する
+    //メニューアイテムが選択/実行された場合は、メソッドの戻り値を「true」にする
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_search -> {
@@ -128,13 +135,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun execute(element: Realm,position: Int) {
+
+        if () {
+            mTaskAdapter = mRealm.where(TaskAdapter.class).equalTo(taskList[position].category).findFirst()
+
+        }else{
+            Toast.makeText(applicationContext, "入力されたカテゴリは見つかりませんでした。", Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
 
         mRealm.close()
     }
 }
-
-
-
 

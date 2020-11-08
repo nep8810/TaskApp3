@@ -13,20 +13,22 @@ class SearchActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.app_bar_search, menu)
-
         val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
         searchView = menu.findItem(app_bar_search).actionView as SearchView
         val searchableInfo = searchManager.getSearchableInfo(componentName)
         searchView?.setSearchableInfo(searchableInfo)
 
+        //isIconified = trueでSearchViewを閉じる
         searchView?.isIconified
 
+        //入力された文字列のイベントリスナー
         searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            //ユーザーによってボタンが押された時に呼ばれる
             override fun onQueryTextSubmit(query: String?): Boolean {
                 finish()
                 return true
             }
-
+            //ユーザーによって文字列が変更された時に呼ばれる
             override fun onQueryTextChange(newText: String?): Boolean {
                 return false
             }
@@ -35,4 +37,3 @@ class SearchActivity : AppCompatActivity() {
     }
 
 }
-
