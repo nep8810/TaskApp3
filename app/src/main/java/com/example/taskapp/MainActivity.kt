@@ -10,9 +10,12 @@ import android.content.Intent
 import android.support.v7.app.AlertDialog
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.app.SearchManager
+import android.content.Context
+import android.support.v7.widget.SearchView
 import android.view.Menu
-import android.view.MenuItem
 import android.widget.Toast
+import kotlinx.android.synthetic.main.content_input.*
 
 
 const val EXTRA_TASK = "com.example.taskapp.TASK"
@@ -20,6 +23,8 @@ var taskList = mutableListOf<Task>() //可変リスト
 
 class MainActivity : AppCompatActivity() {
     //Realmクラスを保持するmRealmを定義
+    //lateinitで宣言することで初期化タイミングをonCreate()まで遅延させている
+    //変数をlateinit宣言することにより、non-null な初期化済みの変数として参照することができるようになる
     private lateinit var mRealm: Realm
     //RealmChangeListenerクラスのmRealmListenerはRealmのデータベースに追加や削除など変化があった場合に呼ばれるリスナー
     private val mRealmListener = object : RealmChangeListener<Realm> {
@@ -35,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //＋ボタンを押したときの処理
         fab.setOnClickListener { view ->
             val intent = Intent(this@MainActivity, InputActivity::class.java)
             startActivity(intent)
@@ -116,40 +122,80 @@ class MainActivity : AppCompatActivity() {
         mTaskAdapter.notifyDataSetChanged()
     }
 
-    //onCreateOptionsMenuメソッドにて、ActivityのもつMenuInflaterを取得し、リソースファイルをinflateしてmenuオブジェクトへ追加する
-    //このActivityでOptionsMenuを使用したい場合は、メソッドの戻り値を「true」にする
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
-
-    //onOptionsItemSelected()はメニューアイテムが選択された際の処理を実装する
-    //メニューアイテムが選択/実行された場合は、メソッドの戻り値を「true」にする
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_search -> {
-                startActivity(Intent(this, SearchActivity::class.java))
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    override fun execute(element: Realm,position: Int) {
-
-        if () {
-            mTaskAdapter = mRealm.where(TaskAdapter.class).equalTo(taskList[position].category).findFirst()
-
-        }else{
-            Toast.makeText(applicationContext, "入力されたカテゴリは見つかりませんでした。", Toast.LENGTH_SHORT).show()
-            finish()
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
 
         mRealm.close()
     }
-}
 
+
+    private var searchView: SearchView? = null
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    menuInflater.inflate(R.menu.app_bar_search, menu)
+    val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+    searchView = menu.findItem(R.id.app_bar_search).actionView as SearchView
+    val searchableInfo = searchManager.getSearchableInfo(componentName)
+    searchView?.setSearchableInfo(searchableInfo)
+
+    //isIconified = trueでSearchViewを閉じる
+    searchView?.isIconified
+
+    //入力された文字列のイベントリスナー
+    searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+        //ユーザーによってボタンが押された時に呼ばれる
+        override fun onQueryTextSubmit(query: String?): Boolean {
+
+            val CATEGORY = category_edit_text?.text.toString()
+            //インスタンス作成
+            val mRealm = Realm.getDefaultInstance()
+
+            if (R.menu.app_bar_search!= null) {
+                //全取得＆絞り込み
+                val taskRealmResults = mRealm.where(Task::class.java).equalTo("category", CATEGORY).findAll().sort("category",Sort.DESCENDING)
+
+                //上記の結果をtaskListとしてセットする
+                mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
+
+                // TaskのListView用のアダプタに渡す
+                listView1.adapter = mTaskAdapter
+
+                // 表示を更新するために、アダプタにデータが変更されたことを知らせる
+                mTaskAdapter.notifyDataSetChanged()
+            }else{
+                Toast.makeText(applicationContext, "入力されたカテゴリは見つかりませんでした。", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+            return true
+        }
+
+        //ユーザーによって文字列が変更された時に呼ばれる
+        override fun onQueryTextChange(newText: String?): Boolean {
+
+            //Intentによってクラスの垣根を超えてTaskのidを渡したり(putExtra())受け取ったり(putExtra())できる。
+            val CATEGORY = category_edit_text.text.toString()
+            //インスタンス作成
+            val mRealm = Realm.getDefaultInstance()
+
+            if (R.menu.app_bar_search!= null) {
+                //全取得＆絞り込み
+                val taskRealmResults = mRealm.where(Task::class.java).equalTo("category", CATEGORY).findAll().sort("category",Sort.DESCENDING)
+
+                mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
+
+                // TaskのListView用のアダプタに渡す
+                listView1.adapter = mTaskAdapter
+
+                // 表示を更新するために、アダプタにデータが変更されたことを知らせる
+                mTaskAdapter.notifyDataSetChanged()
+            }else{
+                Toast.makeText(applicationContext, "入力されたカテゴリは見つかりませんでした。", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+            return true
+        }
+    })
+    return true
+ }
+
+}
