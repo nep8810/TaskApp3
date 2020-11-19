@@ -13,9 +13,10 @@ import android.app.PendingIntent
 import android.app.SearchManager
 import android.content.Context
 import android.support.v7.widget.SearchView
+import android.util.Log
 import android.view.Menu
 import android.widget.Toast
-import kotlinx.android.synthetic.main.content_input.*
+import io.realm.Case
 
 
 const val EXTRA_TASK = "com.example.taskapp.TASK"
@@ -58,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         listView1.setOnItemClickListener { parent, _, position, _ ->
             // 入力・編集する画面に遷移させる
             val task = parent.adapter.getItem(position) as Task
+            //Intentによってクラスの垣根を超えてTaskのidを渡したり(putExtra())受け取ったり(putExtra())できる。
             val intent = Intent(this@MainActivity, InputActivity::class.java)
             intent.putExtra(EXTRA_TASK, task.id)
             startActivity(intent)
@@ -146,13 +148,16 @@ class MainActivity : AppCompatActivity() {
         //ユーザーによってボタンが押された時に呼ばれる
         override fun onQueryTextSubmit(query: String?): Boolean {
 
-            val CATEGORY = category_edit_text?.text.toString()
+            val CATEGORY = query!!
             //インスタンス作成
             val mRealm = Realm.getDefaultInstance()
 
-            if (R.menu.app_bar_search!= null) {
+            if (R.menu.app_bar_search!= null && !R.menu.app_bar_search.equals("")) {
                 //全取得＆絞り込み
-                val taskRealmResults = mRealm.where(Task::class.java).equalTo("category", CATEGORY).findAll().sort("category",Sort.DESCENDING)
+                //equalTo➡containsで部分一致に
+                //Case.INSENSITIVEで大文字小文字の区別をしない
+                val taskRealmResults = mRealm.where(Task::class.java).contains("category", CATEGORY, Case.INSENSITIVE).findAll().sort("category",Sort.DESCENDING)
+
 
                 //上記の結果をtaskListとしてセットする
                 mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
@@ -162,6 +167,15 @@ class MainActivity : AppCompatActivity() {
 
                 // 表示を更新するために、アダプタにデータが変更されたことを知らせる
                 mTaskAdapter.notifyDataSetChanged()
+            }else if (query.isEmpty()){
+                val taskRealmResults = mRealm.where(Task::class.java).findAll().sort("date", Sort.DESCENDING)
+
+                mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
+
+                listView1.adapter = mTaskAdapter
+
+                mTaskAdapter.notifyDataSetChanged()
+
             }else{
                 Toast.makeText(applicationContext, "入力されたカテゴリは見つかりませんでした。", Toast.LENGTH_SHORT).show()
                 finish()
@@ -172,14 +186,13 @@ class MainActivity : AppCompatActivity() {
         //ユーザーによって文字列が変更された時に呼ばれる
         override fun onQueryTextChange(newText: String?): Boolean {
 
-            //Intentによってクラスの垣根を超えてTaskのidを渡したり(putExtra())受け取ったり(putExtra())できる。
-            val CATEGORY = category_edit_text.text.toString()
+            val CATEGORY = newText!!
             //インスタンス作成
             val mRealm = Realm.getDefaultInstance()
 
-            if (R.menu.app_bar_search!= null) {
+            if (R.menu.app_bar_search!= null && !R.menu.app_bar_search.equals("")) {
                 //全取得＆絞り込み
-                val taskRealmResults = mRealm.where(Task::class.java).equalTo("category", CATEGORY).findAll().sort("category",Sort.DESCENDING)
+                val taskRealmResults = mRealm.where(Task::class.java).contains("category", CATEGORY,Case.INSENSITIVE).findAll().sort("category",Sort.DESCENDING)
 
                 mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
 
@@ -188,6 +201,16 @@ class MainActivity : AppCompatActivity() {
 
                 // 表示を更新するために、アダプタにデータが変更されたことを知らせる
                 mTaskAdapter.notifyDataSetChanged()
+            }else if (R.menu.app_bar_search.equals("")){ //query.equals("")が記述できないため
+
+                val taskRealmResults = mRealm.where(Task::class.java).findAll().sort("date", Sort.DESCENDING)
+
+                mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
+
+                listView1.adapter = mTaskAdapter
+
+                mTaskAdapter.notifyDataSetChanged()
+
             }else{
                 Toast.makeText(applicationContext, "入力されたカテゴリは見つかりませんでした。", Toast.LENGTH_SHORT).show()
                 finish()
@@ -196,6 +219,7 @@ class MainActivity : AppCompatActivity() {
         }
     })
     return true
+
  }
 
 }
